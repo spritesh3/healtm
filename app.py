@@ -4,6 +4,7 @@ from models import User, Consultation, PatientMemory
 from ai_engine import ai_consult
 from sqlalchemy.orm import Session
 
+Base.metadata.drop_all(bind=engine)
 Base.metadata.create_all(bind=engine)
 
 st.set_page_config(page_title="AI Telehealth System", layout="wide")
@@ -173,3 +174,4 @@ if st.session_state.user:
                 "audio": True
             }
         )
+
