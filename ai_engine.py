@@ -1,49 +1,52 @@
-from openai import OpenAI
 import streamlit as st
+from openai import OpenAI
 
-# Initialize OpenAI client
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Groq uses OpenAI-compatible API format
+client = OpenAI(
+    api_key=st.secrets["GROQ_API_KEY"],
+    base_url="https://api.groq.com/openai/v1"
+)
 
+def ai_consult(user_input, username, history):
 
-def build_medical_prompt(patient_name, patient_history, current_message):
-    return f"""
-You are an AI Clinical Decision Support System (CDSS) designed for academic research.
+    structured_prompt = f"""
+You are a medical clinical decision support AI.
 
-Patient Name: {patient_name}
+Patient Name: {username}
 
-Previous Medical Conversation:
-{patient_history}
+Previous History:
+{history}
 
-Current Patient Message:
-{current_message}
+New Symptoms:
+{user_input}
 
-Provide response strictly in the following structured format:
+Respond strictly in this format:
 
-1. Clinical Summary
-2. Symptom Analysis
-3. Differential Diagnoses (Ranked by Likelihood)
-4. Risk Stratification (Low / Moderate / High)
-5. Recommended Investigations
-6. Suggested Next Steps
-7. Medical Disclaimer
+1. Possible Conditions:
+- List top possible diagnoses
 
-Use professional medical terminology.
-Do NOT provide a definitive diagnosis.
-If emergency symptoms appear, advise immediate medical attention.
+2. Risk Level:
+- Low / Moderate / High
+
+3. Recommended Action:
+- Self care / Doctor visit / Emergency care
+
+4. Brief Clinical Reasoning:
+- Short explanation
 """
 
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "You are a safe medical AI assistant."},
+                {"role": "user", "content": structured_prompt}
+            ],
+            temperature=0.3,
+            max_tokens=400
+        )
 
-def ai_consult(message, username, patient_history):
+        return response.choices[0].message.content
 
-    prompt = build_medical_prompt(username, patient_history, message)
-
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.3,
-        max_tokens=700
-    )
-
-    return response.choices[0].message.content
+    except Exception as e:
+        return f"AI service temporarily unavailable: {str(e)}"
