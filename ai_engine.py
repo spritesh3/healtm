@@ -1,79 +1,49 @@
 from openai import OpenAI
-from config import OPENAI_API_KEY
-from models import PatientMemory
-from database import SessionLocal
-from datetime import datetime
+import streamlit as st
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Initialize OpenAI client
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-def ai_consult(user_input, username):
-    db = SessionLocal()
 
-    memory = db.query(PatientMemory).filter(
-        PatientMemory.username == username
-    ).first()
+def build_medical_prompt(patient_name, patient_history, current_message):
+    return f"""
+You are an AI Clinical Decision Support System (CDSS) designed for academic research.
 
-    summary = memory.medical_summary if memory else ""
-    symptoms = memory.symptoms if memory else ""
+Patient Name: {patient_name}
 
-    prompt = f"""
-You are an advanced clinical AI assistant.
+Previous Medical Conversation:
+{patient_history}
 
-PATIENT MEMORY:
-Summary: {summary}
-Symptoms: {symptoms}
+Current Patient Message:
+{current_message}
 
-New Message:
-{user_input}
+Provide response strictly in the following structured format:
 
-Tasks:
-1. Analyze progression.
-2. Update structured summary.
-3. Update symptom list.
-4. Assign risk level (Low/Moderate/High/Emergency).
+1. Clinical Summary
+2. Symptom Analysis
+3. Differential Diagnoses (Ranked by Likelihood)
+4. Risk Stratification (Low / Moderate / High)
+5. Recommended Investigations
+6. Suggested Next Steps
+7. Medical Disclaimer
 
-Return format:
-
----AI RESPONSE---
-Text to patient.
-
----UPDATED_SUMMARY---
-summary
-
----UPDATED_SYMPTOMS---
-symptoms
-
----RISK_FLAGS---
-risk
+Use professional medical terminology.
+Do NOT provide a definitive diagnosis.
+If emergency symptoms appear, advise immediate medical attention.
 """
+
+
+def ai_consult(message, username, patient_history):
+
+    prompt = build_medical_prompt(username, patient_history, message)
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3,
+        max_tokens=700
     )
 
-    content = response.choices[0].message.content
-
-    ai_reply = content.split("---UPDATED_SUMMARY---")[0].replace("---AI RESPONSE---","").strip()
-    updated_summary = content.split("---UPDATED_SUMMARY---")[1].split("---UPDATED_SYMPTOMS---")[0].strip()
-    updated_symptoms = content.split("---UPDATED_SYMPTOMS---")[1].split("---RISK_FLAGS---")[0].strip()
-    risk = content.split("---RISK_FLAGS---")[1].strip()
-
-    if memory:
-        memory.medical_summary = updated_summary
-        memory.symptoms = updated_symptoms
-        memory.risk_flags = risk
-        memory.last_updated = datetime.utcnow()
-    else:
-        memory = PatientMemory(
-            username=username,
-            medical_summary=updated_summary,
-            symptoms=updated_symptoms,
-            risk_flags=risk
-        )
-        db.add(memory)
-
-    db.commit()
-    db.close()
-
-    return ai_reply
+    return response.choices[0].message.content
