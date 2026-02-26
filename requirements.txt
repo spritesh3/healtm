@@ -1,0 +1,7 @@
+streamlit
+sqlalchemy
+psycopg2-binary
+openai
+streamlit-webrtc
+av
+python-dotenv
