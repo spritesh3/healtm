@@ -5,3 +5,4 @@ openai
 streamlit-webrtc
 av
 python-dotenv
+streamlit-mic-recorder
