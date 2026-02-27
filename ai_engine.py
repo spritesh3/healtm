@@ -1,7 +1,6 @@
 import streamlit as st
 from openai import OpenAI
 
-# Groq uses OpenAI-compatible API format
 client = OpenAI(
     api_key=st.secrets["GROQ_API_KEY"],
     base_url="https://api.groq.com/openai/v1"
@@ -10,7 +9,15 @@ client = OpenAI(
 def ai_consult(user_input, username, history):
 
     structured_prompt = f"""
-You are a medical clinical decision support AI.
+You are an AI Clinical Decision Support Assistant.
+
+IMPORTANT:
+- Detect the language of the patient's input.
+- Respond in the SAME language.
+- If input is Hindi, reply in Hindi.
+- If input is Tamil, reply in Tamil.
+- If input is Arabic, reply in Arabic.
+- Otherwise reply in English.
 
 Patient Name: {username}
 
@@ -20,7 +27,7 @@ Previous History:
 New Symptoms:
 {user_input}
 
-Respond strictly in this format:
+Respond strictly in this structured format:
 
 1. Possible Conditions:
 - List top possible diagnoses
@@ -39,7 +46,7 @@ Respond strictly in this format:
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {"role": "system", "content": "You are a safe medical AI assistant."},
+                {"role": "system", "content": "You are a safe multilingual medical AI assistant."},
                 {"role": "user", "content": structured_prompt}
             ],
             temperature=0.3,
